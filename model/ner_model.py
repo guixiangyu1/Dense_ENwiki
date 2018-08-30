@@ -198,7 +198,7 @@ class NERModel(BaseModel):
                 # 每个word输出一个char level的embedding，然后与word level的embedding做拼接
                 # 感觉作者写错了output的位置，都取得最后一个output,注意state_of_tuple=True
                 # 问题得到解决：state包含最后的输出，而这里我们只需要最后一个cell的输出即可
-        word_embeddings = tf.reshape(word_embeddings, [-1, tf.shape(word_embeddings)[-1]])
+        # word_embeddings = tf.reshape(word_embeddings, [-1, tf.shape(word_embeddings)[-1]])
         self.word_embeddings =  tf.nn.dropout(word_embeddings, self.dropout)
 
 
@@ -216,6 +216,8 @@ class NERModel(BaseModel):
         #             sequence_length=self.sequence_lengths, dtype=tf.float32)
         #     output = tf.concat([output_fw, output_bw], axis=-1) # shape = [batch_size, max_sentence_length,2*hidden_size_lstm]
         #     output = tf.nn.dropout(output, self.dropout)
+
+
         if self.config.use_chars:
             char_dim = 2*self.config.hidden_size_char
         else:
@@ -225,6 +227,11 @@ class NERModel(BaseModel):
             word_level_dim = 300
         else:
             word_level_dim = 0
+
+        max_length = tf.shape(self.word_embeddings)[1]
+
+        self.word_embeddings = tf.reshape(self.word_embeddings, [-1, tf.shape(self.word_embeddings)[-1]])
+
 
 
         with tf.variable_scope("proj0"):
@@ -244,8 +251,8 @@ class NERModel(BaseModel):
             # nsteps = tf.shape(output)[1]
             # output = tf.reshape(output, [-1, 2*self.config.hidden_size_lstm])
             pred = tf.matmul(output, W) + b
-            # self.logits = tf.reshape(pred, [-1, nsteps, 4])
-            self.logits = pred
+            self.logits = tf.reshape(pred, [-1, max_length, 4])
+
 
 
     def add_pred_op(self):
@@ -271,7 +278,7 @@ class NERModel(BaseModel):
             self.loss = tf.reduce_mean(-log_likelihood)
         else:
             losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    logits=self.logits, labels=tf.reshape(self.labels,[-1,tf.shape(self.labels)[-1]]))
+                    logits=self.logits, labels=self.labels)
             # mask = tf.sequence_mask(self.sequence_lengths)    #[batch_size, max_sentence_length]，不需要指定最大长度
             # losses = tf.boolean_mask(losses, self.mask) # tf.sequence_mask和tf.boolean_mask 来对于序列的padding进行去除的内容
 
