@@ -198,7 +198,7 @@ class NERModel(BaseModel):
                 # 每个word输出一个char level的embedding，然后与word level的embedding做拼接
                 # 感觉作者写错了output的位置，都取得最后一个output,注意state_of_tuple=True
                 # 问题得到解决：state包含最后的输出，而这里我们只需要最后一个cell的输出即可
-
+        word_embeddings = tf.reshape(word_embeddings, [-1, tf.shape(word_embeddings)[-1]])
         self.word_embeddings =  tf.nn.dropout(word_embeddings, self.dropout)
 
 
