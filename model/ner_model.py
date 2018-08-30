@@ -271,7 +271,7 @@ class NERModel(BaseModel):
             self.loss = tf.reduce_mean(-log_likelihood)
         else:
             losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    logits=self.logits, labels=self.labels)
+                    logits=self.logits, labels=tf.reshape(self.labels,[-1,tf.shape(self.labels)[-1]]))
             # mask = tf.sequence_mask(self.sequence_lengths)    #[batch_size, max_sentence_length]，不需要指定最大长度
             # losses = tf.boolean_mask(losses, self.mask) # tf.sequence_mask和tf.boolean_mask 来对于序列的padding进行去除的内容
 
