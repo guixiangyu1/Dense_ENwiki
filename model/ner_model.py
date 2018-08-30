@@ -208,26 +208,44 @@ class NERModel(BaseModel):
         For each word in each sentence of the batch, it corresponds to a vector
         of scores, of dimension equal to the number of tags.
         """
-        with tf.variable_scope("bi-lstm"):
-            cell_fw = tf.contrib.rnn.LSTMCell(self.config.hidden_size_lstm)
-            cell_bw = tf.contrib.rnn.LSTMCell(self.config.hidden_size_lstm)
-            (output_fw, output_bw), _ = tf.nn.bidirectional_dynamic_rnn(
-                    cell_fw, cell_bw, self.word_embeddings,
-                    sequence_length=self.sequence_lengths, dtype=tf.float32)
-            output = tf.concat([output_fw, output_bw], axis=-1) # shape = [batch_size, max_sentence_length,2*hidden_size_lstm]
-            output = tf.nn.dropout(output, self.dropout)
+        # with tf.variable_scope("bi-lstm"):
+        #     cell_fw = tf.contrib.rnn.LSTMCell(self.config.hidden_size_lstm)
+        #     cell_bw = tf.contrib.rnn.LSTMCell(self.config.hidden_size_lstm)
+        #     (output_fw, output_bw), _ = tf.nn.bidirectional_dynamic_rnn(
+        #             cell_fw, cell_bw, self.word_embeddings,
+        #             sequence_length=self.sequence_lengths, dtype=tf.float32)
+        #     output = tf.concat([output_fw, output_bw], axis=-1) # shape = [batch_size, max_sentence_length,2*hidden_size_lstm]
+        #     output = tf.nn.dropout(output, self.dropout)
+        if self.config.use_chars:
+            char_dim = 2*self.config.hidden_size_char
+        else:
+            char_dim = 0
+
+        if self.config.use_word_level_embedding:
+            word_level_dim = 300
+        else:
+            word_level_dim = 0
+
+
+        with tf.variable_scope("proj0"):
+            W0 = tf.get_variable("W0", dtype=tf.float32,
+                                 shape=[300+word_level_dim+char_dim, 200])
+            b0 = tf.get_variable("b0", shape=[200],
+                    dtype=tf.float32, initializer=tf.zeros_initializer())
+            output = tf.matmul(self.word_embeddings, W0) + b0
 
         with tf.variable_scope("proj"):
             W = tf.get_variable("W", dtype=tf.float32,
-                    shape=[2*self.config.hidden_size_lstm, 4])
+                    shape=[200, 4])
 
             b = tf.get_variable("b", shape=[4],
                     dtype=tf.float32, initializer=tf.zeros_initializer())
 
-            nsteps = tf.shape(output)[1]
-            output = tf.reshape(output, [-1, 2*self.config.hidden_size_lstm])
+            # nsteps = tf.shape(output)[1]
+            # output = tf.reshape(output, [-1, 2*self.config.hidden_size_lstm])
             pred = tf.matmul(output, W) + b
-            self.logits = tf.reshape(pred, [-1, nsteps, 4])
+            # self.logits = tf.reshape(pred, [-1, nsteps, 4])
+            self.logits = pred
 
 
     def add_pred_op(self):
@@ -255,7 +273,7 @@ class NERModel(BaseModel):
             losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
                     logits=self.logits, labels=self.labels)
             # mask = tf.sequence_mask(self.sequence_lengths)    #[batch_size, max_sentence_length]，不需要指定最大长度
-            losses = tf.boolean_mask(losses, self.mask) # tf.sequence_mask和tf.boolean_mask 来对于序列的padding进行去除的内容
+            # losses = tf.boolean_mask(losses, self.mask) # tf.sequence_mask和tf.boolean_mask 来对于序列的padding进行去除的内容
 
             self.loss = tf.reduce_mean(losses)
 

@@ -78,9 +78,9 @@ class Config():
     use_pretrained = True
 
     # dataset
-    filename_dev = "data/test1.txt"
-    filename_test = "data/test1.txt"
-    filename_train = "data/train1.txt"
+    filename_dev = "data/test1_entity.txt"
+    filename_test = "data/test1_entity.txt"
+    filename_train = "data/train1_entity.txt"
 
     # filename_dev = filename_test = filename_train = "data/test.txt" # test
 
